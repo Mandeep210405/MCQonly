@@ -1,0 +1,42 @@
+### Node / Next.js
+frontend/.next/
+frontend/node_modules/
+frontend/out/
+frontend/.turbo/
+
+### Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.venv/
+venv/
+env/
+
+### Local env/config
+.env
+.env.*
+!.env.example
+chatbot_service/.env
+
+### Logs
+*.log
+logs/
+
+### OS
+.DS_Store
+Thumbs.db
+
+### Local data
+chatbot_service/chroma_db/
+chatbot_service/.venv/
+chatbot_service/__pycache__/
+chatbot_service/*.sqlite
+chatbot_service/*.sqlite3

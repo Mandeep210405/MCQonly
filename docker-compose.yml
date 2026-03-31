@@ -1,0 +1,54 @@
+
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: intern_postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: intern_management
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: vidhikasttl
+
+    ports:
+      - "5433:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  hasura:
+    image: hasura/graphql-engine:v2.36.0
+    container_name: hasura_engine
+    restart: unless-stopped
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    ports:
+      - "9090:8080"
+
+    environment:
+      
+      HASURA_GRAPHQL_METADATA_DATABASE_URL: postgres://postgres:vidhikasttl@postgres:5432/intern_management
+      
+      HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:vidhikasttl@postgres:5432/intern_management
+   
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
+
+    
+      HASURA_GRAPHQL_DEV_MODE: "true"
+
+      
+      HASURA_GRAPHQL_ADMIN_SECRET: sttl6
+
+volumes:
+  postgres_data:
+  
