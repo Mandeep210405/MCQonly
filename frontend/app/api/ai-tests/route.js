@@ -1,178 +1,19 @@
-// // app/api/ai-tests/route.js
-// import { getServerSession } from "next-auth";
-// import { authOptions } from "@/lib/auth";
-// import { NextResponse } from "next/server";
-// import { generatePersonalizedQuestions } from "@/lib/ai-service";
-// import { 
-//   createTestSession, 
-//   insertTestQuestions, 
-//   getTests,
-//   getMultipleInternsDetails
-// } from "@/lib/test-queries";
+// FILE: frontend/app/api/ai-tests/route.js
+// Removed: test_type, topic, question_type, expected_output, rubric, ai_feedback
+// Grading is now instant MCQ comparison — no OpenAI call needed for grading
 
-// // Create a new test session
-// export async function POST(req) {
-//   const session = await getServerSession(authOptions);
-//   if (!session || !['admin', 'hr', 'mentor'].includes(session.user.role)) {
-//     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-//   }
-
-//   try {
-//     const body = await req.json();
-//     const { 
-//       intern_ids, 
-//       test_type, 
-//       scheduled_at, 
-//       duration_minutes,
-//       question_config 
-//     } = body;
-
-//     // Debug log
-//     console.log('Received test creation request:', {
-//       intern_ids,
-//       test_type,
-//       scheduled_at,
-//       scheduled_at_type: typeof scheduled_at,
-//       duration_minutes,
-//       question_config
-//     });
-
-//     if (!intern_ids || intern_ids.length === 0) {
-//       return NextResponse.json({ error: 'No interns selected' }, { status: 400 });
-//     }
-
-//     // Get all intern details for personalized questions
-//     const internsDetails = await getMultipleInternsDetails(intern_ids);
-    
-//     const sessions = [];
-    
-//     for (const intern of internsDetails) {
-//       // Create test session for this intern
-//       const testSessionId = await createTestSession(
-//         intern.id,
-//         session.user.id,
-//         test_type,
-//         scheduled_at,
-//         duration_minutes
-//       );
-
-//       // Generate PERSONALIZED questions based on intern's profile
-//       const questions = await generatePersonalizedQuestions({
-//         type: test_type,
-//         count: question_config.count,
-//         difficulty: question_config.difficulty,
-//         topic: question_config.topic,
-//         internProfile: intern  // Pass intern's skills, experience, etc.
-//       });
-
-//       // Prepare questions for insertion
-//       const questionsToInsert = questions.map((q, i) => ({
-//         session_id: testSessionId,
-//         question_number: i + 1,
-//         question_text: q.text,
-//         question_type: q.type,
-//         difficulty: q.difficulty,
-//         options: q.options ? JSON.stringify(q.options) : null,
-//         correct_answer: q.correct_answer,
-//         expected_output: q.expected_output,
-//         rubric: q.rubric,
-//         points: q.points || (q.difficulty === 'easy' ? 10 : q.difficulty === 'medium' ? 15 : 20)
-//       }));
-
-//       await insertTestQuestions(questionsToInsert);
-//       sessions.push({
-//         id: testSessionId,
-//         intern_id: intern.id,
-//         intern_name: intern.user?.name,
-//         questions_count: questions.length
-//       });
-//     }
-
-//     return NextResponse.json({ 
-//       ok: true, 
-//       sessions,
-//       message: `Test scheduled for ${intern_ids.length} intern(s) with personalized questions based on their skills`
-//     });
-//   } catch (error) {
-//     console.error('Test creation error:', error);
-//     return NextResponse.json({ error: error.message }, { status: 500 });
-//   }
-// }
-
-// // Get tests for current user
-// export async function GET(req) {
-//   const session = await getServerSession(authOptions);
-//   if (!session) {
-//     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-//   }
-
-//   const { searchParams } = new URL(req.url);
-//   const status = searchParams.get('status');
-
-//   try {
-//     const tests = await getTests(session.user.role, session.user.id, status);
-    
-//     // Transform to match expected format
-//     const formattedTests = tests.map(test => ({
-//       id: test.id,
-//       intern_id: test.intern_id,
-//       conducted_by: test.conducted_by,
-//       conducted_by_name: test.conducted_by_user?.name,
-//       intern_name: test.intern?.user?.name,
-//       status: test.status,
-//       test_type: test.test_type,
-//       scheduled_at: test.scheduled_at,
-//       duration_minutes: test.duration_minutes,
-//       total_questions: test.test_questions_aggregate?.aggregate?.count || 0,
-//       answered_questions: test.test_responses_aggregate?.aggregate?.count || 0,
-//       percentage: test.test_results?.[0]?.percentage,
-//       grade: test.test_results?.[0]?.grade,
-//     }));
-
-//     return NextResponse.json({ ok: true, tests: formattedTests });
-//   } catch (error) {
-//     console.error('Fetch tests error:', error);
-//     return NextResponse.json({ error: error.message }, { status: 500 });
-//   }
-// }
-
-// app/api/ai-tests/route.js
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { NextResponse } from "next/server";
-import { generatePersonalizedQuestions } from "@/lib/ai-service";
-import { 
-  createTestSession, 
-  insertTestQuestions, 
+import { getServerSession }              from 'next-auth';
+import { authOptions }                   from '@/lib/auth';
+import { NextResponse }                  from 'next/server';
+import { generatePersonalizedQuestions } from '@/lib/ai-service';
+import {
+  createTestSession,
+  insertTestQuestions,
   getTests,
-  getMultipleInternsDetails
-} from "@/lib/test-queries";
+  getMultipleInternsDetails,
+} from '@/lib/test-queries';
 
-// Helper function to convert local time to IST timestamp
-function convertToISTTimestamp(scheduledAt) {
-  // If scheduled_at already has timezone info, use as is
-  if (scheduledAt.includes('+') || scheduledAt.includes('Z')) {
-    return scheduledAt;
-  }
-  
-  // Otherwise, treat it as local time and add IST offset
-  // Expected format: "2026-04-02T22:09:00"
-  if (scheduledAt.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/)) {
-    return `${scheduledAt}+05:30`; // Add IST offset (UTC+5:30)
-  }
-  
-  // If it's just date and time without T
-  if (scheduledAt.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)) {
-    return `${scheduledAt.replace(' ', 'T')}+05:30`;
-  }
-  
-  // Fallback: return as is
-  return scheduledAt;
-}
-
-// app/api/ai-tests/route.js - Updated POST handler
-
-// Create a new test session
+// ─── POST /api/ai-tests — Schedule a new test ─────────────────────────────────
 export async function POST(req) {
   const session = await getServerSession(authOptions);
   if (!session || !['admin', 'hr', 'mentor'].includes(session.user.role)) {
@@ -180,109 +21,76 @@ export async function POST(req) {
   }
 
   try {
-    const body = await req.json();
-    const { 
-      intern_ids, 
-      test_type, 
-      scheduled_at,  // This will be "2026-04-02 22:09:00"
-      duration_minutes,
-      question_config 
-    } = body;
-
-    // Parse the datetime - treat it as local time without any conversion
-    // Split date and time
-    const [date, time] = scheduled_at.split(' ');
-    const [year, month, day] = date.split('-');
-    const [hours, minutes, seconds] = time.split(':');
-    
-    // Create a date object using local components
-    // This creates a date with the exact time you entered, in local time
-    const localDateTime = new Date(Date.UTC(
-      parseInt(year), 
-      parseInt(month) - 1, 
-      parseInt(day), 
-      parseInt(hours), 
-      parseInt(minutes), 
-      parseInt(seconds || 0)
-    ));
-    
-    // Convert to ISO string for storage
-    // This will store the exact moment in UTC
-    const utcTimestamp = localDateTime.toISOString();
-    
-    console.log('=== TIME CONVERSION DEBUG ===');
-    console.log('User entered:', scheduled_at);
-    console.log('Parsed as local components:', { year, month, day, hours, minutes });
-    console.log('Stored as UTC:', utcTimestamp);
-    console.log('Will display as:', new Date(utcTimestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
-    console.log('============================');
+    const { intern_ids, scheduled_at, duration_minutes, question_config } = await req.json();
 
     if (!intern_ids || intern_ids.length === 0) {
       return NextResponse.json({ error: 'No interns selected' }, { status: 400 });
     }
-
-    // Validate future date
-    const now = new Date();
-    if (new Date(utcTimestamp) <= now) {
-      return NextResponse.json({ 
-        error: 'Scheduled time must be in the future',
-        scheduled: scheduled_at,
-        current: now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
-      }, { status: 400 });
+    if (!scheduled_at) {
+      return NextResponse.json({ error: 'scheduled_at is required' }, { status: 400 });
     }
 
-    // Get all intern details
+    // Convert "YYYY-MM-DD HH:MM:SS" → UTC ISO string
+    // Input is treated as IST (UTC+5:30), stored as UTC
+    const [datePart, timePart] = scheduled_at.split(' ');
+    const [year, month, day]   = datePart.split('-').map(Number);
+    const [hours, mins, secs]  = timePart.split(':').map(Number);
+
+    const utcTimestamp = new Date(
+      Date.UTC(year, month - 1, day, hours, mins, secs || 0)
+    ).toISOString();
+
+    // Must be in the future
+    if (new Date(utcTimestamp) <= new Date()) {
+      return NextResponse.json({ error: 'Scheduled time must be in the future' }, { status: 400 });
+    }
+
     const internsDetails = await getMultipleInternsDetails(intern_ids);
-    
     const sessions = [];
-    
+
     for (const intern of internsDetails) {
-      // Create test session - pass the UTC timestamp
+      // Create session — no test_type
       const testSessionId = await createTestSession(
         intern.id,
         session.user.id,
-        test_type,
-        utcTimestamp, // Store as UTC
+        utcTimestamp,
         duration_minutes
       );
 
-      // Generate personalized questions
+      // Generate MCQ questions for this intern
       const questions = await generatePersonalizedQuestions({
-        type: test_type,
-        count: question_config.count,
-        difficulty: question_config.difficulty,
-        topic: question_config.topic,
-        internProfile: intern
+        count:         question_config.count,
+        difficulty:    question_config.difficulty,
+        internProfile: intern,
+        // topic removed
       });
 
-      // Insert questions
-      const questionsToInsert = questions.map((q, i) => ({
-        session_id: testSessionId,
+      // Build insert objects — no question_type, rubric, expected_output
+      const toInsert = questions.map((q, i) => ({
+        session_id:      testSessionId,
         question_number: i + 1,
-        question_text: q.text,
-        question_type: q.type,
-        difficulty: q.difficulty,
-        options: q.options ? JSON.stringify(q.options) : null,
-        correct_answer: q.correct_answer,
-        expected_output: q.expected_output,
-        rubric: q.rubric,
-        points: q.points || (q.difficulty === 'easy' ? 10 : q.difficulty === 'medium' ? 15 : 20)
+        question_text:   q.text,
+        difficulty:      q.difficulty,
+        options:         q.options,
+        correct_answer:  q.correct_answer,
+        points:          q.points,
+        // question_type, expected_output, rubric removed
       }));
 
-      await insertTestQuestions(questionsToInsert);
+      await insertTestQuestions(toInsert);
+
       sessions.push({
-        id: testSessionId,
-        intern_id: intern.id,
-        intern_name: intern.user?.name,
-        questions_count: questions.length
+        id:              testSessionId,
+        intern_id:       intern.id,
+        intern_name:     intern.user?.name,
+        questions_count: questions.length,
       });
     }
 
-    return NextResponse.json({ 
-      ok: true, 
+    return NextResponse.json({
+      ok:      true,
       sessions,
-      scheduled_at_local: scheduled_at,
-      message: `Test scheduled for ${intern_ids.length} intern(s) at ${scheduled_at}`
+      message: `Test scheduled for ${intern_ids.length} intern(s) at ${scheduled_at}`,
     });
   } catch (error) {
     console.error('Test creation error:', error);
@@ -290,43 +98,31 @@ export async function POST(req) {
   }
 }
 
-// Get tests for current user
+// ─── GET /api/ai-tests — Fetch all tests for current user ────────────────────
 export async function GET(req) {
   const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get('status');
 
   try {
     const tests = await getTests(session.user.role, session.user.id, status);
-    
-    // Transform to match expected format and add formatted time for display
+
     const formattedTests = tests.map(test => ({
-      id: test.id,
-      intern_id: test.intern_id,
-      conducted_by: test.conducted_by,
+      id:              test.id,
+      intern_id:       test.intern_id,
+      conducted_by:    test.conducted_by,
       conducted_by_name: test.conducted_by_user?.name,
-      intern_name: test.intern?.user?.name,
-      status: test.status,
-      test_type: test.test_type,
-      scheduled_at: test.scheduled_at,
-      scheduled_at_local: test.scheduled_at ? new Date(test.scheduled_at).toLocaleString('en-IN', { 
-        timeZone: 'Asia/Kolkata',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      }) : null,
+      intern_name:     test.intern?.user?.name,
+      status:          test.status,
+      // test_type removed
+      scheduled_at:    test.scheduled_at,
       duration_minutes: test.duration_minutes,
       total_questions: test.test_questions_aggregate?.aggregate?.count || 0,
       answered_questions: test.test_responses_aggregate?.aggregate?.count || 0,
-      percentage: test.test_results?.[0]?.percentage,
-      grade: test.test_results?.[0]?.grade,
+      percentage:      test.test_results?.[0]?.percentage ?? null,
+      grade:           test.test_results?.[0]?.grade ?? null,
     }));
 
     return NextResponse.json({ ok: true, tests: formattedTests });
