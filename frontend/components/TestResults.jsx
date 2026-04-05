@@ -26,31 +26,14 @@ export default function TestResults({ results, test, onClose }) {
   const grade = results.grade || 'F';
   const aiFeedback = results.ai_feedback || results.overall_feedback || '';
 
-  // Helper to clean MCQ options for display
-  const formatAnswer = (answer, questionType, options) => {
-    if (!answer) return '[No answer provided]';
-    
-    if (questionType === 'mcq' && (answer === 'a' || answer === 'b' || answer === 'c' || answer === 'd')) {
-      // Try to get the full option text
-      if (options && typeof options === 'object') {
-        const optionText = options[answer];
-        if (optionText) {
-          return `Option ${answer.toUpperCase()}: ${optionText}`;
-        }
-      }
-      return `Option ${answer.toUpperCase()}`;
+  // Helper to display MCQ answer — all questions are MCQ
+  const formatAnswer = (selected_option, options) => {
+    if (!selected_option) return '[No answer provided]';
+    if (options && typeof options === 'object') {
+      const optionText = options[selected_option];
+      if (optionText) return `Option ${selected_option.toUpperCase()}: ${optionText}`;
     }
-    
-    return answer;
-  };
-
-  // Helper to clean option text
-  const cleanOptionText = (text) => {
-    if (!text) return '';
-    if (typeof text === 'string') {
-      return text.replace(/^["']|["']$/g, '').trim();
-    }
-    return text;
+    return `Option ${selected_option.toUpperCase()}`;
   };
 
   // Helper to parse options if needed
@@ -153,7 +136,6 @@ export default function TestResults({ results, test, onClose }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {detailedResults.map((item, idx) => {
-            const questionType = item.question_type || (item.question_text?.includes('?') ? 'descriptive' : 'mcq');
             const options = item.options ? parseOptions(item.options) : null;
             
             return (
@@ -172,14 +154,14 @@ export default function TestResults({ results, test, onClose }) {
                     borderRadius: '99px', 
                     fontSize: '12px', 
                     fontWeight: '600',
-                    background: item.obtained_points === item.max_points ? 'rgba(34,197,94,0.12)' : 
-                               item.obtained_points > 0 ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)',
-                    color: item.obtained_points === item.max_points ? '#22c55e' : 
-                           item.obtained_points > 0 ? '#f59e0b' : '#ef4444',
+                    background: item.points_earned === item.max_points ? 'rgba(34,197,94,0.12)' : 
+                               item.points_earned > 0 ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)',
+                    color: item.points_earned === item.max_points ? '#22c55e' : 
+                           item.points_earned > 0 ? '#f59e0b' : '#ef4444',
                     whiteSpace: 'nowrap',
                     marginLeft: '12px'
                   }}>
-                    {item.obtained_points}/{item.max_points}
+                    {item.points_earned}/{item.max_points}
                   </span>
                 </div>
                 
@@ -187,10 +169,20 @@ export default function TestResults({ results, test, onClose }) {
                 <div style={{ marginBottom: '8px', padding: '12px', background: 'var(--bg-input)', borderRadius: '8px' }}>
                   <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Your Answer:</p>
                   <p style={{ fontSize: '13px', fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                    {formatAnswer(item.answer, questionType, options)}
+                    {formatAnswer(item.selected_option, options)}
                   </p>
                 </div>
                 
+                {/* Correct Answer — shown only when wrong */}
+                {!item.is_correct && item.correct_answer && (
+                  <div style={{ marginBottom: '8px', padding: '12px', background: 'rgba(34,197,94,0.08)', borderRadius: '8px', border: '1px solid rgba(34,197,94,0.2)' }}>
+                    <p style={{ fontSize: '11px', color: '#22c55e', marginBottom: '4px' }}>Correct Answer:</p>
+                    <p style={{ fontSize: '13px', fontFamily: 'monospace' }}>
+                      {formatAnswer(item.correct_answer, options)}
+                    </p>
+                  </div>
+                )}
+
                 {/* AI Feedback */}
                 {item.feedback && (
                   <div style={{ padding: '8px 12px', background: 'rgba(26,58,255,0.08)', borderRadius: '8px' }}>
