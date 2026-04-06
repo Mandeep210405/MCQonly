@@ -1,7 +1,3 @@
-// FILE: frontend/lib/test-queries.js
-// Removed: test_type, question_type, expected_output, rubric, ai_feedback
-// These fields no longer exist in the MCQ-only schema
-
 import { gqlFetch } from './graphql-client';
 
 // ─── Create test session (no test_type anymore) ───────────────────────────────
@@ -136,9 +132,12 @@ export async function getTests(userRole, userId, filterStatus = null) {
         ai_test_sessions(where: $where, order_by: {scheduled_at: desc}) {
           id intern_id conducted_by status scheduled_at
           started_at submitted_at completed_at duration_minutes
-          # test_type removed
           conducted_by_user: user { id name email }
-          intern { id user { id name email } }
+          intern {
+            id
+            user_id
+            intern_user: userByUserId { id name email }
+          }
           test_questions_aggregate { aggregate { count } }
           test_responses_aggregate  { aggregate { count } }
           test_results { id percentage grade }

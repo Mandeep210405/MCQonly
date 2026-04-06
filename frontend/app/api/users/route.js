@@ -31,7 +31,7 @@ const CREATE_USER = `
 
 export const GET = async (req) => {
     try {
-        const session = await requireAuth(req, ["admin", "hr"])
+        const session = await requireAuth(req, ["admin", "hr","mentor"])
         if (!session) {
             return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 })
         }

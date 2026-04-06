@@ -1,7 +1,3 @@
-// FILE: frontend/app/api/ai-tests/route.js
-// Removed: test_type, topic, question_type, expected_output, rubric, ai_feedback
-// Grading is now instant MCQ comparison — no OpenAI call needed for grading
-
 import { getServerSession }              from 'next-auth';
 import { authOptions }                   from '@/lib/auth';
 import { NextResponse }                  from 'next/server';
@@ -114,7 +110,7 @@ export async function GET(req) {
       intern_id:       test.intern_id,
       conducted_by:    test.conducted_by,
       conducted_by_name: test.conducted_by_user?.name,
-      intern_name:     test.intern?.user?.name,
+      intern_name:     test.intern?.intern_user?.name,
       status:          test.status,
       // test_type removed
       scheduled_at:    test.scheduled_at,
